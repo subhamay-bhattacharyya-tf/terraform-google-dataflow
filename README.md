@@ -1,71 +1,185 @@
-# Terraform Module for GCS Bucket
+# terraform-google-dataflow
 
-![Release](https://github.com/subhamay-bhattacharyya-tf/terraform-google-module-template/actions/workflows/ci.yaml/badge.svg)&nbsp;![GCP](https://img.shields.io/badge/GCP-4285F4?logo=googlecloud&logoColor=white)&nbsp;![Commit Activity](https://img.shields.io/github/commit-activity/t/subhamay-bhattacharyya-tf/terraform-google-module-template)&nbsp;![Last Commit](https://img.shields.io/github/last-commit/subhamay-bhattacharyya-tf/terraform-google-module-template)&nbsp;![Release Date](https://img.shields.io/github/release-date/subhamay-bhattacharyya-tf/terraform-google-module-template)&nbsp;![Repo Size](https://img.shields.io/github/repo-size/subhamay-bhattacharyya-tf/terraform-google-module-template)&nbsp;![File Count](https://img.shields.io/github/directory-file-count/subhamay-bhattacharyya-tf/terraform-google-module-template)&nbsp;![Issues](https://img.shields.io/github/issues/subhamay-bhattacharyya-tf/terraform-google-module-template)&nbsp;![Top Language](https://img.shields.io/github/languages/top/subhamay-bhattacharyya-tf/terraform-google-module-template)&nbsp;![Built with Claude Code](https://img.shields.io/badge/Built%20with-Claude%20Code-623CE4?logo=anthropic&logoColor=white)&nbsp;![Custom Endpoint](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/bsubhamay/476e6e7583432e960e6de16d5223e6a3/raw/terraform-google-module-template.json?)
+![Release](https://github.com/subhamay-bhattacharyya-tf/terraform-google-dataflow/actions/workflows/ci.yaml/badge.svg)&nbsp;![GCP](https://img.shields.io/badge/GCP-4285F4?logo=googlecloud&logoColor=white)&nbsp;![Commit Activity](https://img.shields.io/github/commit-activity/t/subhamay-bhattacharyya-tf/terraform-google-dataflow)&nbsp;![Last Commit](https://img.shields.io/github/last-commit/subhamay-bhattacharyya-tf/terraform-google-dataflow)&nbsp;![Release Date](https://img.shields.io/github/release-date/subhamay-bhattacharyya-tf/terraform-google-dataflow)&nbsp;![Repo Size](https://img.shields.io/github/repo-size/subhamay-bhattacharyya-tf/terraform-google-dataflow)&nbsp;![File Count](https://img.shields.io/github/directory-file-count/subhamay-bhattacharyya-tf/terraform-google-dataflow)&nbsp;![Issues](https://img.shields.io/github/issues/subhamay-bhattacharyya-tf/terraform-google-dataflow)&nbsp;![Top Language](https://img.shields.io/github/languages/top/subhamay-bhattacharyya-tf/terraform-google-dataflow)&nbsp;![Built with Claude Code](https://img.shields.io/badge/Built%20with-Claude%20Code-623CE4?logo=anthropic&logoColor=white)&nbsp;![Custom Endpoint](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/bsubhamay/476e6e7583432e960e6de16d5223e6a3/raw/terraform-google-dataflow.json?)&nbsp;![Terraform Version](https://img.shields.io/badge/terraform-%3E%3D1.3-blue)&nbsp;![Provider Version](https://img.shields.io/badge/google-%3E%3D7.23-blue)
 
-A Terraform module for creating and managing a **Google Cloud Storage (GCS) bucket** on GCP.
+A Terraform module for creating and managing a **Google Dataflow job** on GCP.
+
+---
 
 ## Overview
 
-This module provisions a single `google_storage_bucket` resource via the `terraform-google-module-template` module. It accepts a small set of flat input variables and assembles the required `gcs_config` object, enforcing `uniform_bucket_level_access = true` and `public_access_prevention = "enforced"` by default.
+This module provisions a single `google_dataflow_job` resource using a structured `dataflow_job_config` input object. It supports classic template-based Dataflow jobs with configurable worker sizing, networking, CMEK encryption, Streaming Engine, and custom service accounts. All input validation (naming rules, GCS path format, region enum, IP configuration) lives in `variables.tf`, keeping calling configurations clean and predictable.
 
-## Requirements
-
-| Requirement | Version |
-|---|---|
-| Terraform | >= 1.3.0 |
-| Google Provider | >= 7.23.0 |
+---
 
 ## Usage
 
 ```hcl
-module "gcs_bucket" {
-  source = "github.com/subhamay-bhattacharyya-tf/terraform-google-module-template"
+module "dataflow_job" {
+  source  = "subhamay-bhattacharyya-tf/dataflow/google"
+  version = "~> 1.0"
 
-  bucket_name = "my-portfolio-bucket"
-  project_id  = "portfolio-site"
-  location    = "US"
-  environment = "prod"
+  environment  = "prod"
+  project_code = "myco"
+  region       = "us-central1"
+
+  dataflow_job_config = {
+    base_name         = "word-count"
+    project_id        = "prj-11-dataflow-16748"
+    region            = "us-central1"
+    template_gcs_path = "gs://dataflow-templates-us-central1/latest/Word_Count"
+    temp_gcs_location = "gs://prj-11-dataflow-16748-dataflow-tmp/word-count"
+
+    # Optional
+    machine_type     = "n1-standard-4"
+    max_workers      = 10
+    ip_configuration = "WORKER_IP_PRIVATE"
+    labels           = { env = "prod", team = "data-engineering" }
+    parameters = {
+      inputFile = "gs://dataflow-samples/shakespeare/kinglear.txt"
+      output    = "gs://prj-11-dataflow-16748-output/word-count"
+    }
+  }
 }
 ```
 
-## Input Variables
+---
+
+## Requirements
+
+| Name | Version |
+| --- | --- |
+| terraform | >= 1.3.0 |
+| google | >= 7.23.0 |
+
+**Additional prerequisites:**
+
+- GCP credentials with permissions: `dataflow.jobs.create`, `storage.objects.get`, `storage.objects.create`
+- A GCS bucket accessible at `template_gcs_path`
+- A writable GCS bucket for `temp_gcs_location`
+- Workload Identity Federation configured for CI (see CI section below)
+
+---
+
+## Inputs
+
+<!-- AUTO-GENERATED by terraform-docs — do not edit manually -->
 
 | Name | Description | Type | Default | Required |
-|---|---|---|---|---|
-| `bucket_name` | Name of the GCS bucket | `string` | — | yes |
-| `project_id` | GCP project ID | `string` | `"portfolio-site"` | no |
-| `region` | GCP region | `string` | `"us-central1"` | no |
-| `location` | GCS bucket location | `string` | `"US"` | no |
-| `storage_class` | Storage class | `string` | `"STANDARD"` | no |
-| `force_destroy` | Force-destroy bucket on destroy | `bool` | `false` | no |
-| `versioning` | Enable object versioning | `bool` | `false` | no |
-| `labels` | Additional labels | `map(string)` | `{}` | no |
-| `project` | Project label value | `string` | `"portfolio-site"` | no |
-| `environment` | Environment label value | `string` | `"dev"` | no |
+| --- | --- | --- | --- | :---: |
+| environment | Deployment environment. One of: devl, test, prod | `string` | n/a | **yes** |
+| project\_code | Short identifier used in resource naming standardization | `string` | n/a | **yes** |
+| region | GCP region for the provider | `string` | `"us-central1"` | no |
+| dataflow\_job\_config | Configuration object for the Google Dataflow job | `object(...)` | n/a | **yes** |
+
+### `dataflow_job_config` Attributes
+
+| Attribute | Type | Default | Required |
+| --- | --- | --- | :---: |
+| `base_name` | `string` | n/a | **yes** |
+| `project_id` | `string` | n/a | **yes** |
+| `template_gcs_path` | `string` | n/a | **yes** |
+| `temp_gcs_location` | `string` | n/a | **yes** |
+| `region` | `string` | `"us-central1"` | no |
+| `machine_type` | `string` | `"n1-standard-2"` | no |
+| `max_workers` | `number` | `1` | no |
+| `network` | `string` | `null` | no |
+| `subnetwork` | `string` | `null` | no |
+| `service_account_email` | `string` | `null` | no |
+| `ip_configuration` | `string` | `"WORKER_IP_PRIVATE"` | no |
+| `enable_streaming_engine` | `bool` | `false` | no |
+| `kms_key_name` | `string` | `null` | no |
+| `parameters` | `map(string)` | `{}` | no |
+| `labels` | `map(string)` | `{}` | no |
+| `additional_experiments` | `list(string)` | `[]` | no |
+
+---
 
 ## Outputs
 
+<!-- AUTO-GENERATED by terraform-docs — do not edit manually -->
+
 | Name | Description |
-|---|---|
-| `bucket_id` | The ID of the GCS bucket |
-| `bucket_name` | The name of the GCS bucket |
-| `bucket_project` | The project ID where the bucket is created |
-| `bucket_location` | The location of the GCS bucket |
-| `bucket_url` | The URL of the GCS bucket |
-| `bucket_self_link` | The self link of the GCS bucket resource |
-| `bucket_storage_class` | The storage class of the GCS bucket |
-| `bucket_force_destroy` | Whether force_destroy is enabled |
+| --- | --- |
+| job\_id | The unique ID of the Dataflow job |
+| job\_name | The name of the Dataflow job |
+| job\_state | The current state of the Dataflow job |
+| job\_type | The type of the Dataflow job (JOB\_TYPE\_BATCH or JOB\_TYPE\_STREAMING) |
+| job\_project | The GCP project in which the job runs |
+| job\_region | The GCP region in which the job runs |
+| template\_gcs\_path | The GCS path of the Dataflow template |
+| temp\_gcs\_location | The GCS path used for temporary Dataflow files |
+
+---
+
+## Resources
+
+| Name | Type |
+| --- | --- |
+| [google_dataflow_job.this](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/dataflow_job) | resource |
+
+---
+
+## Examples
+
+> Each example is a standalone, runnable Terraform configuration stored in `examples/dataflow/<name>/` with its own `README.md` and terraform validation.
+
+| Example | Description |
+| --- | --- |
+| [`basic`](examples/dataflow/basic/) | Minimal required fields only |
+| [`with-custom-machine-type`](examples/dataflow/with-custom-machine-type/) | n1-highmem-4 machine with autoscaling ceiling |
+| [`with-max-workers`](examples/dataflow/with-max-workers/) | Autoscaling ceiling of 20 workers |
+| [`with-private-ip`](examples/dataflow/with-private-ip/) | VPC-private workers (no public IPs) |
+| [`with-streaming-engine`](examples/dataflow/with-streaming-engine/) | Streaming Engine enabled |
+| [`with-kms`](examples/dataflow/with-kms/) | CMEK encryption |
+| [`with-labels`](examples/dataflow/with-labels/) | Resource labelling |
+| [`with-service-account`](examples/dataflow/with-service-account/) | Custom worker service account |
+| [`with-parameters`](examples/dataflow/with-parameters/) | Template-specific pipeline parameters |
+| [`with-experiments`](examples/dataflow/with-experiments/) | Dataflow experimental features |
+| [`complete`](examples/dataflow/complete/) | All features combined |
+
+---
+
+## Notes & Caveats
+
+> **Destructive operation:** Destroying this module cancels the running Dataflow job. Ensure all downstream consumers of job outputs are aware before running `terraform destroy`.
+
+- Dataflow jobs are **not idempotent** — each `terraform apply` may submit a new job run if parameters change. The `lifecycle { ignore_changes = [parameters] }` block prevents spurious replacements.
+- `ip_configuration = "WORKER_IP_PRIVATE"` requires Private Google Access enabled on the subnet.
+- `enable_streaming_engine = true` is only applicable to streaming pipelines.
+- CMEK (`kms_key_name`) requires the Dataflow service account to have `roles/cloudkms.cryptoKeyEncrypterDecrypter` on the key.
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for full guidelines.
+
+```bash
+# Quick start
+git clone git@github.com:subhamay-bhattacharyya-tf/terraform-google-dataflow.git
+cd terraform-google-dataflow
+terraform fmt -recursive
+terraform validate
+```
+
+1. Fork the repository and create a feature branch (`git checkout -b feat/my-feature`)
+2. Run `terraform fmt`, `terraform validate`, and `terraform-docs .`
+3. Add or update tests under `test/` (Terratest)
+4. Open a pull request against `main` with a clear description of changes
+
+---
 
 ## CI / Workload Identity Federation Setup
 
-The Terratest job authenticates to GCP via [Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation) (service account impersonation). If the job fails with `Permission 'iam.serviceAccounts.getAccessToken' denied`, grant the WIF pool principal the required IAM binding:
+The Terratest job authenticates to GCP via [Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation). If the job fails with `Permission 'iam.serviceAccounts.getAccessToken' denied`, grant the WIF pool principal the required IAM binding:
 
 ```bash
 gcloud iam service-accounts add-iam-policy-binding \
-    "sa-17-cloud-storage@prj-17-cloud-storage-16748.iam.gserviceaccount.com" \
-    --project="prj-17-cloud-storage-16748" \
+    "<service-account-email>" \
+    --project="<gcp-project-id>" \
     --role="roles/iam.workloadIdentityUser" \
-    --member="principalSet://iam.googleapis.com/projects/578842011545/locations/global/workloadIdentityPools/github-actions/attribute.repository/subhamay-bhattacharyya-tf/terraform-google-module-template"
+    --member="principalSet://iam.googleapis.com/projects/<project-number>/locations/global/workloadIdentityPools/<pool-name>/attribute.repository/<github-org>/terraform-google-dataflow"
 ```
 
 The three repository variables required by the CI workflow are:
@@ -76,6 +190,8 @@ The three repository variables required by the CI workflow are:
 | `GCP_WORKLOAD_IDENTITY_PROVIDER` | Full WIF provider resource name |
 | `GCP_SERVICE_ACCOUNT` | Service account email to impersonate |
 
+---
+
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+MIT © 2026 Subhamay Bhattacharyya — see [LICENSE](./LICENSE) for full terms.
