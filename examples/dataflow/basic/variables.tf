@@ -26,3 +26,9 @@ variable "template_gcs_path" {
 variable "temp_gcs_location" {
   type = string
 }
+
+variable "service_account_email" {
+  description = "Service account email for Dataflow workers. Defaults to the Compute Engine default SA when null."
+  type        = string
+  default     = null
+}

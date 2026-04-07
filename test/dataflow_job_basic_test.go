@@ -16,18 +16,23 @@ func TestDataflowJobBasic(t *testing.T) {
 	projectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
 	require.NotEmpty(t, projectID, "GOOGLE_CLOUD_PROJECT env var must be set")
 
+	vars := map[string]interface{}{
+		"environment":       "devl",
+		"project_code":      "test",
+		"region":            "us-central1",
+		"base_name":         "terratest-basic",
+		"project_id":        projectID,
+		"template_gcs_path": "gs://dataflow-templates-us-central1/latest/Word_Count",
+		"temp_gcs_location": "gs://" + projectID + "-dataflow-tmp/terratest",
+	}
+	if sa := os.Getenv("DATAFLOW_WORKER_SA"); sa != "" {
+		vars["service_account_email"] = sa
+	}
+
 	terraformOptions := &terraform.Options{
 		TerraformDir: "../examples/dataflow/basic",
-		Vars: map[string]interface{}{
-			"environment":       "devl",
-			"project_code":      "test",
-			"region":            "us-central1",
-			"base_name":         "terratest-basic",
-			"project_id":        projectID,
-			"template_gcs_path": "gs://dataflow-templates-us-central1/latest/Word_Count",
-			"temp_gcs_location": "gs://" + projectID + "-dataflow-tmp/terratest",
-		},
-		NoColor: true,
+		Vars:         vars,
+		NoColor:      true,
 	}
 
 	defer terraform.Destroy(t, terraformOptions)

@@ -141,10 +141,12 @@ jobs:
 
       - name: Run Terratest - Dataflow Job Basic
         id: dataflow-job-basic-test
+        env:
+          DATAFLOW_WORKER_SA: ${{ vars.GCP_SERVICE_ACCOUNT }}
         run: |
           set -o pipefail
           go test -v -timeout 30m -run TestDataflowJobBasic \
-            ./dataflow_job_basic_test.go 2>&1 | tee test_output.txt
+            ./dataflow_job_basic_test.go ./helpers_test.go 2>&1 | tee test_output.txt
           echo "## Dataflow Job Basic Test Results" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           cat test_output.txt >> $GITHUB_STEP_SUMMARY
