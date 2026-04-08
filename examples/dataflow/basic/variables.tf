@@ -32,3 +32,9 @@ variable "service_account_email" {
   type        = string
   default     = null
 }
+
+variable "parameters" {
+  description = "Template-specific parameters to pass to the Dataflow job."
+  type        = map(string)
+  default     = {}
+}

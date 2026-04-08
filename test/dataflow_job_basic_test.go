@@ -24,6 +24,10 @@ func TestDataflowJobBasic(t *testing.T) {
 		"project_id":        projectID,
 		"template_gcs_path": "gs://dataflow-templates-us-central1/latest/Word_Count",
 		"temp_gcs_location": "gs://" + projectID + "-dataflow-tmp/terratest",
+		"parameters": map[string]interface{}{
+			"inputFile": "gs://dataflow-samples/shakespeare/kinglear.txt",
+			"output":    "gs://" + projectID + "-dataflow-tmp/terratest/wordcount/output",
+		},
 	}
 	if sa := os.Getenv("DATAFLOW_WORKER_SA"); sa != "" {
 		vars["service_account_email"] = sa
